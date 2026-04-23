@@ -80,6 +80,7 @@ function ProductScene({ scrollYProgress }: { scrollYProgress: any }) {
               zIndex: 1,
               pointerEvents: 'auto',
               filter: 'drop-shadow(0 15px 25px rgba(255,200,0,0.3))',
+              clipPath: 'polygon(25% 0%, 80% 0%, 80% 100%, 25% 100%)',
             }}
           />
 
@@ -99,6 +100,7 @@ function ProductScene({ scrollYProgress }: { scrollYProgress: any }) {
               zIndex: 2,
               pointerEvents: 'auto',
               filter: 'drop-shadow(0 15px 25px rgba(255,200,0,0.3))',
+              clipPath: 'polygon(22% 0%, 77% 0%, 77% 100%, 22% 100%)',
             }}
           />
 
@@ -119,6 +121,7 @@ function ProductScene({ scrollYProgress }: { scrollYProgress: any }) {
               zIndex: 3,
               pointerEvents: 'auto',
               filter: 'drop-shadow(-10px 20px 30px rgba(255,200,0,0.35))',
+              clipPath: 'polygon(22% 0%, 80% 0%, 80% 100%, 22% 100%)',
             }}
           />
         </div>
