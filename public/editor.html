@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Product Scene Editor</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0f172a; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+  .editor { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+  .scene { position: relative; width: 700px; aspect-ratio: 1448 / 1086; }
+  .scene img.box { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+  .clip-area { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 4; }
+  .clip-area img { position: absolute; cursor: grab; transform-origin: center bottom; }
+  .clip-area img:active { cursor: grabbing; }
+
+  .handle { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #f97316; border: 2px solid #fff; cursor: grab; z-index: 100; transform: translate(-50%, -50%); box-shadow: 0 0 8px rgba(249,115,22,0.6); }
+  .handle:active { cursor: grabbing; background: #ef4444; }
+  .handle::after { content: attr(data-label); position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 10px; white-space: nowrap; color: #fbbf24; font-weight: 700; }
+
+  .clip-outline { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 99; pointer-events: none; }
+
+  .panel { width: 380px; background: #1e293b; padding: 16px; overflow-y: auto; border-left: 1px solid #334155; display: flex; flex-direction: column; gap: 10px; }
+  .panel h2 { font-size: 15px; color: #f97316; border-bottom: 1px solid #334155; padding-bottom: 6px; }
+  .panel h3 { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+  .output { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 10px; font-family: 'Consolas', monospace; font-size: 11px; color: #4ade80; white-space: pre-wrap; word-break: break-all; line-height: 1.4; max-height: 320px; overflow-y: auto; }
+  .btn { background: #f97316; border: none; color: #fff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .btn:hover { background: #ea580c; }
+  .section { background: #1a2332; padding: 8px 10px; border-radius: 6px; }
+  .item-controls { display: flex; flex-direction: column; gap: 3px; }
+  .item-controls label { font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .item-controls input[type=number] { width: 70px; background: #0f172a; border: 1px solid #475569; color: #fff; padding: 3px 5px; border-radius: 3px; font-size: 11px; text-align: right; }
+  .item-controls input[type=range] { width: 100px; accent-color: #f97316; }
+  .rot-row { display: flex; align-items: center; gap: 6px; }
+  .help { font-size: 11px; color: #64748b; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="editor">
+  <div class="scene" id="scene">
+    <img class="box" src="/product/mbox.png" alt="Box" />
+
+    <svg class="clip-outline" id="clipOutline" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <polygon id="clipPoly" fill="none" stroke="#f97316" stroke-width="0.3" stroke-dasharray="1,0.5" />
+    </svg>
+
+    <div class="clip-area" id="clipArea">
+      <img id="first"  src="/product/first.png" />
+      <img id="middle" src="/product/middle.png" />
+      <img id="third"  src="/product/third.png" />
+    </div>
+
+    <div class="handle" id="h_tl" data-label="TL"></div>
+    <div class="handle" id="h_tr" data-label="TR"></div>
+    <div class="handle" id="h_br" data-label="BR"></div>
+    <div class="handle" id="h_bl" data-label="BL"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel">
+  <h2>🎯 Product Scene Editor</h2>
+  <p class="help">• Drag <b>packets</b> to reposition.<br>• Drag <b>orange dots</b> to adjust clip-path.<br>• Use <b>sliders</b> for rotation &amp; size.<br>• Click <b>Copy</b> for final CSS.</p>
+
+  <div class="section">
+    <h3>📐 Clip-Path Corners</h3>
+    <div class="item-controls">
+      <label>TL: <input type="number" id="in_tl_x" step="0.5" onchange="clipTL.x=+this.value;refresh()"> , <input type="number" id="in_tl_y" step="0.5" onchange="clipTL.y=+this.value;refresh()"></label>
+      <label>TR: <input type="number" id="in_tr_x" step="0.5" onchange="clipTR.x=+this.value;refresh()"> , <input type="number" id="in_tr_y" step="0.5" onchange="clipTR.y=+this.value;refresh()"></label>
+      <label>BR: <input type="number" id="in_br_x" step="0.5" onchange="clipBR.x=+this.value;refresh()"> , <input type="number" id="in_br_y" step="0.5" onchange="clipBR.y=+this.value;refresh()"></label>
+      <label>BL: <input type="number" id="in_bl_x" step="0.5" onchange="clipBL.x=+this.value;refresh()"> , <input type="number" id="in_bl_y" step="0.5" onchange="clipBL.y=+this.value;refresh()"></label>
+    </div>
+  </div>
+
+  <div id="itemPanels"></div>
+
+  <div class="section">
+    <h3>📋 Final CSS Output</h3>
+    <div id="cssOutput" class="output"></div>
+    <button class="btn" style="margin-top:8px;width:100%;" onclick="copyCSS()">Copy to Clipboard</button>
+  </div>
+</div>
+
+<script>
+const scene = document.getElementById('scene');
+const clipArea = document.getElementById('clipArea');
+const clipPoly = document.getElementById('clipPoly');
+
+let clipTL = { x: 9.4,  y: -10.0 };
+let clipTR = { x: 109.9, y: -4.0 };
+let clipBR = { x: 71.9,  y: 40.9 };
+let clipBL = { x: 23.4,  y: 32.5 };
+
+const items = {
+  first:  { el: null, w: 40, bottom: 55, left: 4,   right: null, rotate: 0,  name: 'First (Left)' },
+  middle: { el: null, w: 36, bottom: 60, left: 28,  right: null, rotate: 0,  name: 'Middle' },
+  third:  { el: null, w: 40, bottom: 52, left: null, right: -2,  rotate: 0,  name: 'Third (Right + Jelly)' },
+};
+
+Object.keys(items).forEach(id => { items[id].el = document.getElementById(id); });
+
+function applyClipPath() {
+  const poly = `polygon(${clipTL.x}% ${clipTL.y}%, ${clipTR.x}% ${clipTR.y}%, ${clipBR.x}% ${clipBR.y}%, ${clipBL.x}% ${clipBL.y}%)`;
+  clipArea.style.clipPath = poly;
+  clipPoly.setAttribute('points',
+    `${clipTL.x},${clipTL.y} ${clipTR.x},${clipTR.y} ${clipBR.x},${clipBR.y} ${clipBL.x},${clipBL.y}`
+  );
+  const rect = scene.getBoundingClientRect();
+  posHandle('h_tl', clipTL, rect);
+  posHandle('h_tr', clipTR, rect);
+  posHandle('h_br', clipBR, rect);
+  posHandle('h_bl', clipBL, rect);
+
+  document.getElementById('in_tl_x').value = clipTL.x.toFixed(1);
+  document.getElementById('in_tl_y').value = clipTL.y.toFixed(1);
+  document.getElementById('in_tr_x').value = clipTR.x.toFixed(1);
+  document.getElementById('in_tr_y').value = clipTR.y.toFixed(1);
+  document.getElementById('in_br_x').value = clipBR.x.toFixed(1);
+  document.getElementById('in_br_y').value = clipBR.y.toFixed(1);
+  document.getElementById('in_bl_x').value = clipBL.x.toFixed(1);
+  document.getElementById('in_bl_y').value = clipBL.y.toFixed(1);
+}
+
+function posHandle(id, pt, rect) {
+  const h = document.getElementById(id);
+  h.style.left = (pt.x / 100 * rect.width) + 'px';
+  h.style.top  = (pt.y / 100 * rect.height) + 'px';
+}
+
+function applyItems() {
+  Object.keys(items).forEach(id => {
+    const it = items[id];
+    it.el.style.width = it.w + '%';
+    it.el.style.bottom = it.bottom + '%';
+    it.el.style.transform = `rotate(${it.rotate}deg)`;
+    if (it.left !== null)  { it.el.style.left = it.left + '%'; it.el.style.right = 'auto'; }
+    if (it.right !== null) { it.el.style.right = it.right + '%'; it.el.style.left = 'auto'; }
+  });
+}
+
+function updateCSS() {
+  let css = `// Clip-path:\nclipPath: 'polygon(${clipTL.x.toFixed(1)}% ${clipTL.y.toFixed(1)}%, ${clipTR.x.toFixed(1)}% ${clipTR.y.toFixed(1)}%, ${clipBR.x.toFixed(1)}% ${clipBR.y.toFixed(1)}%, ${clipBL.x.toFixed(1)}% ${clipBL.y.toFixed(1)}%)',\n\n`;
+  Object.keys(items).forEach(id => {
+    const it = items[id];
+    css += `// ${it.name}\nwidth: '${it.w}%',\nbottom: '${it.bottom.toFixed(1)}%',\n`;
+    if (it.left !== null) css += `left: '${it.left.toFixed(1)}%',\n`;
+    if (it.right !== null) css += `right: '${it.right.toFixed(1)}%',\n`;
+    if (it.rotate !== 0) css += `rotate: ${it.rotate.toFixed(1)},\n`;
+    css += '\n';
+  });
+  document.getElementById('cssOutput').textContent = css;
+}
+
+function buildItemPanels() {
+  const container = document.getElementById('itemPanels');
+  container.innerHTML = '';
+  Object.keys(items).forEach(id => {
+    const it = items[id];
+    const div = document.createElement('div');
+    div.className = 'section';
+    div.innerHTML = `
+      <h3>${it.name}</h3>
+      <div class="item-controls">
+        <label>Size: 
+          <div class="rot-row">
+            <input type="range" min="10" max="80" step="1" value="${it.w}" oninput="items['${id}'].w=+this.value;this.parentElement.querySelector('span').textContent=this.value+'%';refresh()">
+            <span style="color:#fff;font-size:12px;min-width:35px">${it.w}%</span>
+          </div>
+        </label>
+        <label>Rotation:
+          <div class="rot-row">
+            <input type="range" min="-45" max="45" step="1" value="${it.rotate}" oninput="items['${id}'].rotate=+this.value;this.parentElement.querySelector('span').textContent=this.value+'°';refresh()">
+            <span style="color:#fff;font-size:12px;min-width:35px">${it.rotate}°</span>
+          </div>
+        </label>
+        <label>Bottom: <input type="number" value="${it.bottom.toFixed(1)}" step="0.5" onchange="items['${id}'].bottom=+this.value;refresh()"> %</label>
+        ${it.left !== null ? `<label>Left: <input type="number" value="${it.left.toFixed(1)}" step="0.5" onchange="items['${id}'].left=+this.value;refresh()"> %</label>` : ''}
+        ${it.right !== null ? `<label>Right: <input type="number" value="${it.right.toFixed(1)}" step="0.5" onchange="items['${id}'].right=+this.value;refresh()"> %</label>` : ''}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function refresh() {
+  applyClipPath();
+  applyItems();
+  updateCSS();
+}
+
+function makeDraggable(handleId, point) {
+  const handle = document.getElementById(handleId);
+  let dragging = false;
+  handle.addEventListener('mousedown', (e) => { dragging = true; e.preventDefault(); });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const rect = scene.getBoundingClientRect();
+    point.x = Math.max(-20, Math.min(120, (e.clientX - rect.left) / rect.width * 100));
+    point.y = Math.max(-20, Math.min(120, (e.clientY - rect.top) / rect.height * 100));
+    refresh();
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+}
+
+function makeItemDraggable(id) {
+  const el = items[id].el;
+  let dragging = false;
+  let startX, startY, origBottom, origLeft, origRight;
+
+  el.addEventListener('mousedown', (e) => {
+    dragging = true; e.preventDefault();
+    startX = e.clientX; startY = e.clientY;
+    origBottom = items[id].bottom;
+    origLeft = items[id].left;
+    origRight = items[id].right;
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const rect = scene.getBoundingClientRect();
+    const dx = (e.clientX - startX) / rect.width * 100;
+    const dy = (e.clientY - startY) / rect.height * 100;
+    items[id].bottom = origBottom - dy;
+    if (items[id].left !== null) items[id].left = origLeft + dx;
+    if (items[id].right !== null) items[id].right = origRight - dx;
+    refresh();
+    buildItemPanels();
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+}
+
+function copyCSS() {
+  navigator.clipboard.writeText(document.getElementById('cssOutput').textContent).then(() => alert('Copied!'));
+}
+
+makeDraggable('h_tl', clipTL);
+makeDraggable('h_tr', clipTR);
+makeDraggable('h_br', clipBR);
+makeDraggable('h_bl', clipBL);
+Object.keys(items).forEach(id => makeItemDraggable(id));
+buildItemPanels();
+refresh();
+window.addEventListener('resize', refresh);
+</script>
+</body>
+</html>
