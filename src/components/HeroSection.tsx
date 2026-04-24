@@ -179,11 +179,11 @@ export default function HeroSection() {
       <div
         style={{
           position: 'absolute',
-          right: '8%',
-          top: '58%',
+          right: '7%',
+          top: '55%',
           transform: 'translateY(-50%)',
-          width: '55%',
-          maxWidth: '780px',
+          width: '50%',
+          maxWidth: '700px',
           zIndex: 0,
           perspective: '1200px',
         }}
