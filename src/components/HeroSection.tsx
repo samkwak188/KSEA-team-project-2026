@@ -180,7 +180,7 @@ export default function HeroSection() {
         style={{
           position: 'absolute',
           right: '7%',
-          top: '55%',
+          top: '61%',
           transform: 'translateY(-50%)',
           width: '50%',
           maxWidth: '700px',
